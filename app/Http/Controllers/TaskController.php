@@ -7,18 +7,19 @@ use App\Task;
 use App\Http\Requests\EditTask;
 use App\Http\Requests\CreateTask;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class TaskController extends Controller
 {
     public function index(int $id) {
 
-        // 全てのフォルダデータ取得
-        $folders = Folder::all();
+        // ユーザーのフォルダデータ取得
+        $folders = Auth::user()->folders()->get();
 
         // 選ばれたフォルダを取得 $idと一致するフォルダ
         $current_folder = Folder::find($id);
 
-        // 選ばれたフォルダに紐づくタスクを取得 whereはSQLのwhere区と同様
+        // ユーザーのフォルダに紐づくタスクを取得 whereはSQLのwhere区と同様
         $tasks = $current_folder->tasks()->get();
 
         return view('tasks/index', [
