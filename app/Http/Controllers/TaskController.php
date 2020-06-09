@@ -11,52 +11,47 @@ use Illuminate\Support\Facades\Auth;
 
 class TaskController extends Controller
 {
-    public function index(int $id) {
+    public function index(Folder $folder) {
 
         // ユーザーのフォルダデータ取得
         $folders = Auth::user()->folders()->get();
 
         // 選ばれたフォルダを取得 $idと一致するフォルダ
-        $current_folder = Folder::find($id);
-
-        // ユーザーのフォルダに紐づくタスクを取得 whereはSQLのwhere区と同様
-        $tasks = $current_folder->tasks()->get();
+        $tasks = $folder->tasks()->get();
 
         return view('tasks/index', [
             'folders'   =>  $folders,   // テンプレートにデータを受け渡し
-            'current_folder_id' =>  $current_folder->id,
+            'current_folder_id' =>  $folder->id,
             'tasks' => $tasks,
         ]);
     }
 
-    public function showCreateForm(int $id) {
+    public function showCreateForm(Folder $folder) {
 
         return view('tasks/create', [
-            'folder_id' => $id,
+            'folder_id' => $folder->id,
         ]);
     }
 
-    public function create(int $id, CreateTask $request)
+    public function create(Folder $folder, CreateTask $request)
     {
-        $current_folder = Folder::find($id);
-
         $task = new Task();
         $task->title = $request->title;
         $task->due_date = $request->due_date;
 
-        $current_folder->tasks()->save($task);
+        $folder->tasks()->save($task);
 
         return redirect()->route('tasks.index', [
-            'id' => $current_folder->id,
+            'id' => $folder->id,
         ]);
     }
 
     /**
      * GET /folders/{id}/tasks/{task_id}/edit/
      */
-    public function showEditForm(int $id, int $task_id) {
+    public function showEditForm(Folder $folder, Task $task) {
 
-        $task = Task::find($task_id);
+        $this->checkRelation($folder, $task);
 
         // 編集画面を開いた時に、input要素に値を入れておくため、taskを受け渡す
         return view('tasks/edit', [
@@ -64,15 +59,15 @@ class TaskController extends Controller
         ]);
     }
 
-    public function edit(int $id, int $task_id, EditTask $request) {
+    public function edit(Folder $folder, Task $task, EditTask $request) {
+
+        $this->checkRelation($folder, $task);
 
         /**
          * リクエストされた ID でタスクデータを取得
          * 編集対象のタスクデータに入力値を詰めて save
          * 編集対象のタスクが属するタスク一覧画面へリダイレクト
          */
-        $task = Task::find($task_id);
-
         $task->title = $request->title;
         $task->status = $request->status;
         $task->due_date = $request->due_date;
@@ -81,5 +76,11 @@ class TaskController extends Controller
         return redirect()->route('tasks.index', [
             'id' => $task->folder_id,
         ]);
+    }
+
+    private function checkRelation(Folder $folder, Task $task){
+        if ($folder->id !== $task->folder_id) {
+            abort(404);
+        }
     }
 }
